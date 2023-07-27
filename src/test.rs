@@ -3,5 +3,16 @@ use super::*;
 fn create() {
     set_backend(["optix"]).unwrap();
 
-    let x = Float64::from(1f64);
+    type Float32 = Var<f32>;
+
+    let x = Float32::from(1.);
+
+    let z = x + 1.;
+
+    z.0.schedule();
+
+    eval();
+
+    let z: Vec<_> = z.into();
+    dbg!(z);
 }
