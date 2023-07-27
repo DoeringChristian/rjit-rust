@@ -2,6 +2,7 @@
 mod test;
 
 use paste::paste;
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use once_cell::sync::Lazy;
@@ -74,3 +75,21 @@ bop!(Add);
 bop!(Sub);
 bop!(Mul);
 bop!(Div);
+
+impl<T: rjit::AsVarType> Var<T> {
+    pub fn schedule(&self) {
+        self.0.schedule()
+    }
+    pub fn cast<U: rjit::AsVarType>(&self) -> Var<U> {
+        Var(self.0.cast(&U::as_var_type()).unwrap(), PhantomData)
+    }
+    pub fn bitcast<U: rjit::AsVarType>(&self) -> Var<U> {
+        Var(self.0.bitcast(&U::as_var_type()).unwrap(), PhantomData)
+    }
+}
+
+impl<T: rjit::AsVarType> Debug for Var<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
