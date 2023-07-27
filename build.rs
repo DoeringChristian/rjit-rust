@@ -1,9 +1,10 @@
+use enum_iterator::{all, Sequence};
 use std::fmt::Debug;
 use std::io::BufWriter;
 use std::io::Write;
 use std::process::Command;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Sequence)]
 pub enum VarType {
     Bool,
     I8,
@@ -34,21 +35,6 @@ impl VarType {
             VarType::F64 => "f64",
         }
     }
-    pub fn ty(self) -> &'static str {
-        match self {
-            VarType::Bool => "Bool",
-            VarType::I8 => "Int8",
-            VarType::U8 => "UInt8",
-            VarType::I16 => "Int16",
-            VarType::U16 => "UInt16",
-            VarType::I32 => "Int32",
-            VarType::U32 => "UInt32",
-            VarType::I64 => "Int64",
-            VarType::U64 => "UInt64",
-            VarType::F32 => "Float32",
-            VarType::F64 => "Float64",
-        }
-    }
     pub fn vt(self) -> &'static str {
         match self {
             VarType::Bool => "Bool",
@@ -74,104 +60,105 @@ fn main() -> std::io::Result<()> {
         .open("src/autogen.rs")?;
     let mut f = BufWriter::new(f);
 
-    let types = [VarType::F32, VarType::F64];
+    let types = all::<VarType>();
 
     write!(
         f,
         r#"
         use once_cell::sync::Lazy;
+        use std::marker::PhantomData;
 
         pub static TRACE: Lazy<rjit::Trace> = Lazy::new(|| rjit::Trace::default());
+        
+        pub struct Var<T>(rjit::VarRef, PhantomData<T>);
 
         "#
     )?;
     writeln!(f,)?;
 
-    for ty in types {
-        writeln!(f, "pub struct {ty}(pub rjit::VarRef);", ty = ty.ty())?;
+    for ty in types.clone() {
         writeln!(f, "")?;
 
         write!(
             f,
             "
-                impl From<{prim}> for {ty} {{
-                   fn from(value: {prim}) -> Self{{
-                        Self(
-                        TRACE.literal(value).unwrap()
-                        )
-                   }}
+            impl From<{prim}> for Var<{prim}> {{
+                fn from(value: {prim}) -> Self {{
+                    Self(TRACE.literal(value).unwrap(), PhantomData)
                 }}
-                impl<'a> From<&'a [{prim}]> for {ty}{{
-                    fn from(value: &'a [{prim}]) -> Self {{
-                        Self(
-                            TRACE
-                                .array(value)
-                                .unwrap(),
-                        )
-                    }}
+            }}
+            impl<'a> From<&'a [{prim}]> for Var<{prim}> {{
+                fn from(value: &'a [{prim}]) -> Self {{
+                    Self(TRACE.array(value).unwrap(), PhantomData)
                 }}
+            }}
                ",
             prim = ty.prim(),
-            ty = ty.ty(),
         )?;
 
-        for from in types.iter().filter(|_ty| **_ty != ty) {
+        for from in types.clone().filter(|_ty| *_ty != ty) {
             write!(
                 f,
                 r#"
-                    impl From<{from}> for {to}{{
-                        fn from(value: {from}) -> Self{{
-                            Self(value.0.cast(&rjit::VarType::{to_vt}).unwrap())
+                        impl From<Var<{from}>> for Var<{to}>{{
+                            fn from(value: Var<{from}>) -> Self{{
+                                Self(value.0.cast(&rjit::VarType::{to_vt}).unwrap(), PhantomData)
+                            }}
                         }}
-                    }}
-                   "#,
-                to = ty.ty(),
+                        
+                        impl From<{from}> for Var<{to}>{{
+                            fn from(value: {from}) -> Self{{
+                                Var::<{to}>::from(Var::<{from}>::from(value))
+                            }}
+                        }}
+                        impl<'a> From<&'a [{from}]> for Var<{to}>{{
+                            fn from(value: &'a [{from}]) -> Self{{
+                                Var::<{to}>::from(Var::<{from}>::from(value))
+                            }}
+                        }}
+                       "#,
                 to_vt = ty.vt(),
-                from = from.ty(),
+                to = ty.prim(),
+                from = from.prim(),
             )?;
-            // write!(
-            //     f,
-            //     r#"
-            //         impl From<{prim}> for {to}{{
-            //             fn from(value: {prim}) -> Self{{
-            //                 {from}::from(value).into()
-            //             }}
-            //         }}
-            //         impl<'a> From<&'a [{prim}]> for {to}{{
-            //             fn from(value: &'a [{prim}]) -> Self{{
-            //                 {from}::from(value).into()
-            //             }}
-            //         }}
-            //        "#,
-            //     to = ty.ty(),
-            //     from = from.ty(),
-            //     prim = from.prim(),
-            // )?;
         }
     }
 
-    let ops = ["Add", "Mul"];
+    let ops = ["Add", "Sub", "Mul", "Div"];
 
     // Arythmetic operations table:
     for Op in ops {
-        for lhs in types {
-            for rhs in types {
+        for lhs in types.clone() {
+            for rhs in types.clone() {
                 let output = lhs.max(rhs);
 
                 write!(
                     f,
                     "
-                    impl std::ops::{Op}<{rhs}> for {lhs} {{
-                        type Output = {output};
+                        impl std::ops::{Op}<Var<{rhs}>> for Var<{lhs}> {{
+                            type Output = Var<{output}>;
 
-                        fn {op}(self, rhs: {rhs}) -> Self::Output {{
-                            {output}(self.0.{op}(&rhs.0).unwrap())
+                            fn {op}(self, rhs: Var<{rhs}>) -> Self::Output {{
+                                let lhs = self.0.cast(&rjit::VarType::{Output}).unwrap();
+                                let rhs = rhs.0.cast(&rjit::VarType::{Output}).unwrap();
+                                Var(lhs.{op}(&rhs).unwrap(), PhantomData)
+                            }}
                         }}
-                    }}
-                   ",
-                    lhs = lhs.ty(),
-                    rhs = rhs.ty(),
-                    output = output.ty(),
+                        
+                        impl std::ops::{Op}<{rhs}> for Var<{lhs}> {{
+                            type Output = Var<{output}>;
+
+                            fn {op}(self, rhs: {rhs}) -> Self::Output {{
+                                let lhs = self.0.cast(&rjit::VarType::{Output}).unwrap();
+                                let rhs = Var::<{output}>::from(rhs);
+                                Var(lhs.{op}(&rhs.0).unwrap(), PhantomData)
+                            }}
+                        }}
+                       ",
+                    lhs = lhs.prim(),
+                    rhs = rhs.prim(),
+                    output = output.prim(),
+                    Output = output.vt(),
                     op = Op.to_lowercase(),
                 )?;
             }
