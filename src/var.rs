@@ -11,7 +11,7 @@ pub fn array<T: rjit::AsVarType>(value: &[T]) -> Var<T> {
     Var(TRACE.array(value).unwrap(), PhantomData)
 }
 
-pub struct Var<T>(rjit::VarRef, PhantomData<T>);
+pub struct Var<T>(pub rjit::VarRef, pub PhantomData<T>);
 
 impl<T> Clone for Var<T> {
     fn clone(&self) -> Self {
@@ -158,8 +158,14 @@ macro_rules! uop {
 }
 
 impl<T: rjit::AsVarType> Var<T> {
+    pub fn internal(&self) -> &rjit::VarRef {
+        &self.0
+    }
     pub fn schedule(&self) {
         self.0.schedule()
+    }
+    pub fn size(&self) -> usize {
+        self.0.size()
     }
     pub fn cast<U: rjit::AsVarType>(&self) -> Var<U> {
         Var(self.0.cast(&U::as_var_type()).unwrap(), PhantomData)

@@ -2,10 +2,13 @@
 mod test;
 
 mod num_traits;
+mod texture;
 mod var;
+mod vector;
 
 use num_traits::*;
 pub use var::*;
+pub use vector::*;
 
 use once_cell::sync::Lazy;
 
