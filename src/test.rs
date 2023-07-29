@@ -1,15 +1,15 @@
 use super::*;
 #[test]
 fn create() {
+    pretty_env_logger::try_init().ok();
     set_backend(["optix"]).unwrap();
 
-    type Float32 = Var<f32>;
+    let x = array(&[1u16, 2]);
+    let y = array(&[1u16, 3]);
 
-    let x = Float32::from(1.);
+    let z = x.max(y);
 
-    let z = x + 1.;
-
-    z.0.schedule();
+    z.schedule();
 
     eval();
 
