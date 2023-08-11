@@ -135,6 +135,13 @@ impl<'a, T: rjit::AsVarType> From<&'a Var<T>> for Var<T> {
     }
 }
 
+impl<T: rjit::AsVarType> From<rjit::VarRef> for Var<T> {
+    fn from(value: rjit::VarRef) -> Self {
+        assert_eq!(T::as_var_type(), value.ty());
+        Self(value, PhantomData)
+    }
+}
+
 macro_rules! bop {
     ($op:ident -> $ty:ident) => {
         pub fn $op(&self, rhs: impl Into<Var<T>>) -> Var<$ty> {

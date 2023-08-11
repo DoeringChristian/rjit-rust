@@ -1,65 +1,46 @@
 use std::marker::PhantomData;
 
+use rjit::VarRef;
+
 use super::*;
 
-pub struct Texture {
-    textures: Vec<rjit::VarRef>,
-    shape: Vec<usize>,
+pub struct Texture<const N: usize> {
+    texture: VarRef,
+    n_channels: usize,
+    shape: [usize; N],
 }
 
-impl Texture {
-    pub fn new<T: Into<Float32>>(
-        shape: impl IntoIterator<Item = usize>,
-        channels: impl IntoIterator<Item = T>,
-    ) -> Self {
-        // TODO: more efficient textures
-        let shape = shape.into_iter().collect::<Vec<_>>();
-
-        let textures = channels
+impl<const N: usize> Texture<N> {
+    pub fn new(data: impl Into<Float32>, shape: [usize; N], n_channels: usize) -> Self {
+        let data: Float32 = data.into();
+        let texture = data
+            .internal()
+            .to_texture(shape.as_slice(), n_channels)
+            .unwrap();
+        Self {
+            texture,
+            shape,
+            n_channels,
+        }
+    }
+    pub fn eval(&self, pos: impl Into<[Var<f32>; N]>) -> Vec<Float32> {
+        let pos = pos
+            .into()
             .into_iter()
-            .map(|c| c.into().internal().to_texture(&shape, 1).unwrap())
+            .map(|p| p.internal().clone())
             .collect::<Vec<_>>();
-
-        assert!(
-            textures.windows(2).all(|w| w[0].size() == w[1].size()),
-            "All channels of a texture have to have the same size!"
-        );
-
-        Self { textures, shape }
-    }
-    pub fn eval3<V: rjit::AsVarType>(&self, pos: &Vec3<V>) -> Vec<Float32> {
-        let results = self
-            .textures
-            .iter()
-            .map(|t| {
-                Var(
-                    t.tex_lookup(&[&pos.x.internal(), &pos.y.internal(), &pos.z.internal()])
-                        .unwrap()[0]
-                        .clone(),
-                    PhantomData,
-                )
-            })
-            .collect::<Vec<_>>();
-
-        results
-    }
-    pub fn eval2<V: rjit::AsVarType>(&self, pos: &Vec2<V>) -> Vec<Float32> {
-        let results = self
-            .textures
-            .iter()
-            .map(|t| {
-                Var(
-                    t.tex_lookup(&[&pos.x.internal(), &pos.y.internal()])
-                        .unwrap()[0]
-                        .clone(),
-                    PhantomData,
-                )
-            })
-            .collect::<Vec<_>>();
-
-        results
+        let posref = pos.iter().map(|p| p).collect::<Vec<_>>();
+        self.texture
+            .tex_lookup(&posref)
+            .unwrap()
+            .into_iter()
+            .map(|r| Float32::from(r))
+            .collect::<Vec<_>>()
     }
 }
+
+pub type Texture2f = Texture<2>;
+pub type Texture3f = Texture<3>;
 
 #[cfg(test)]
 mod test {
@@ -70,9 +51,9 @@ mod test {
         set_backend(["optix"]).unwrap();
 
         let val = Float32::from(vec![1.; 100].as_slice());
-        let tex = Texture::new([10, 10], [val]);
+        let tex = Texture2f::new(val, [10, 10], 1);
 
-        let x = tex.eval2(&vec2!(0.5, 0.5))[0].clone();
+        let x = tex.eval(vec2!(0.5, 0.5))[0].clone();
 
         x.schedule();
         eval();

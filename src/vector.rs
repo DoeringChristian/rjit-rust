@@ -1,4 +1,5 @@
 use super::*;
+use paste::paste;
 
 #[derive(Clone)]
 pub struct Vec2<T> {
@@ -13,6 +14,11 @@ macro_rules! vec2 {
     ($v:expr) => {
         Vec2::from($v)
     };
+}
+impl<T: rjit::AsVarType> From<Vec2<T>> for [Var<T>; 2] {
+    fn from(value: Vec2<T>) -> Self {
+        [value.x, value.y]
+    }
 }
 impl<T: rjit::AsVarType, V: Into<Var<T>>> From<V> for Vec2<T> {
     fn from(value: V) -> Self {
@@ -63,6 +69,11 @@ macro_rules! vec3 {
         Vec3::from($v)
     };
 }
+impl<T: rjit::AsVarType> From<Vec3<T>> for [Var<T>; 3] {
+    fn from(value: Vec3<T>) -> Self {
+        [value.x, value.y, value.z]
+    }
+}
 impl<T: rjit::AsVarType, V: Into<Var<T>>> From<V> for Vec3<T> {
     fn from(value: V) -> Self {
         let value = value.into();
@@ -107,6 +118,11 @@ macro_rules! vec4 {
     ($v:expr) => {
         Vec4::from($v)
     };
+}
+impl<T: rjit::AsVarType> From<Vec4<T>> for [Var<T>; 4] {
+    fn from(value: Vec4<T>) -> Self {
+        [value.x, value.y, value.z, value.w]
+    }
 }
 impl<T: rjit::AsVarType, V: Into<Var<T>>> From<V> for Vec4<T> {
     fn from(value: V) -> Self {
