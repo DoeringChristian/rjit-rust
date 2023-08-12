@@ -10,10 +10,19 @@ pub fn literal<T: rjit::AsVarType>(value: T) -> Var<T> {
 pub fn array<T: rjit::AsVarType>(value: &[T]) -> Var<T> {
     Var(TRACE.array(value).unwrap(), PhantomData)
 }
+pub fn idx(size: usize) -> UInt32 {
+    Var(TRACE.index(size), PhantomData)
+}
 pub fn full<T: rjit::AsVarType>(value: T, size: usize) -> Var<T> {
     let lit = literal(value);
     let sized: UInt32 = TRACE.sized_literal(0u32, size).unwrap().into();
-    lit.gather(sized, Some(true))
+    lit.gather(sized, true)
+}
+pub fn zero<T: rjit::AsVarType + Zero>(size: usize) -> Var<T> {
+    full(T::zero(), size)
+}
+pub fn one<T: rjit::AsVarType + One>(size: usize) -> Var<T> {
+    full(T::one(), size)
 }
 
 pub struct Var<T>(pub rjit::VarRef, pub PhantomData<T>);
@@ -21,6 +30,17 @@ pub struct Var<T>(pub rjit::VarRef, pub PhantomData<T>);
 impl<T> Clone for Var<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone(), self.1.clone())
+    }
+}
+
+impl<T: rjit::AsVarType + Zero> Zero for Var<T> {
+    fn zero() -> Self {
+        literal(T::zero())
+    }
+}
+impl<T: rjit::AsVarType + One> One for Var<T> {
+    fn one() -> Self {
+        literal(T::one())
     }
 }
 
@@ -92,6 +112,12 @@ macro_rules! arythmetic_ops {
                 type Output = Var<$ty>;
                 fn [<$Op:lower>](self, rhs: Rhs) -> Self::Output {
                     Self::$op(&self, rhs)
+                }
+            }
+            impl<'a, Rhs: Into<Var<$ty>>> std::ops::$Op<Rhs> for &'a Var<$ty> {
+                type Output = Var<$ty>;
+                fn [<$Op:lower>](self, rhs: Rhs) -> Self::Output {
+                    self.$op(rhs)
                 }
             }
         }
@@ -173,6 +199,9 @@ impl<T: rjit::AsVarType> Var<T> {
     pub fn internal(&self) -> &rjit::VarRef {
         &self.0
     }
+    pub fn ty(&self) -> rjit::VarType {
+        self.0.ty()
+    }
     pub fn schedule(&self) {
         self.0.schedule()
     }
@@ -211,22 +240,25 @@ impl<T: rjit::AsVarType> Var<T> {
     pub fn gather<I: rjit::AsVarType + Int>(
         &self,
         index: impl Into<Var<I>>,
-        mask: Option<impl Into<Bool>>,
+        mask: impl Into<Bool>,
     ) -> Self {
         let index = index.into();
-        let mask = mask.map(|m| m.into().0);
-        Self(self.0.gather(&index.0, mask.as_ref()).unwrap(), PhantomData)
+        Self(
+            self.0.gather(&index.0, Some(&mask.into().0)).unwrap(),
+            PhantomData,
+        )
     }
     pub fn scatter<I: rjit::AsVarType + Int>(
         &self,
         dst: impl Into<Var<T>>,
         index: impl Into<Var<I>>,
-        mask: Option<impl Into<Var<bool>>>,
+        mask: impl Into<Var<bool>>,
     ) {
         let dst = dst.into();
         let index = index.into();
-        let mask = mask.map(|m| m.into().0);
-        self.0.scatter(&dst.0, &index.0, mask.as_ref()).unwrap();
+        self.0
+            .scatter(&dst.0, &index.0, Some(&mask.into().0))
+            .unwrap();
     }
     pub fn scatter_reduce<I: rjit::AsVarType + Int>(
         &self,
