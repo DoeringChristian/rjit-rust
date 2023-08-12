@@ -14,6 +14,17 @@ impl<const N: usize> Texture<N> {
     pub fn new(data: impl Into<Float32>, shape: [usize; N], n_channels: usize) -> Self {
         let data: Float32 = data.into();
 
+        let size = shape.iter().fold(1, |a, b| a * b) * n_channels;
+
+        let data = if data.is_literal() {
+            let sized: UInt64 = TRACE.sized_literal(0u64, size as _).unwrap().into();
+            data.gather(sized, true)
+        } else {
+            data.schedule();
+            eval();
+            data
+        };
+
         let texture = data
             .internal()
             .to_texture(shape.as_slice(), n_channels)
