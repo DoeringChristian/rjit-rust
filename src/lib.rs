@@ -2,6 +2,7 @@
 mod test;
 
 mod num_traits;
+mod tensor;
 mod texture;
 mod var;
 mod vector;

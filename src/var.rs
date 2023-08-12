@@ -10,6 +10,11 @@ pub fn literal<T: rjit::AsVarType>(value: T) -> Var<T> {
 pub fn array<T: rjit::AsVarType>(value: &[T]) -> Var<T> {
     Var(TRACE.array(value).unwrap(), PhantomData)
 }
+pub fn full<T: rjit::AsVarType>(value: T, size: usize) -> Var<T> {
+    let lit = literal(value);
+    let sized: UInt32 = TRACE.sized_literal(0u32, size).unwrap().into();
+    lit.gather(sized, Some(true))
+}
 
 pub struct Var<T>(pub rjit::VarRef, pub PhantomData<T>);
 
@@ -174,6 +179,9 @@ impl<T: rjit::AsVarType> Var<T> {
     pub fn size(&self) -> usize {
         self.0.size()
     }
+    pub fn is_literal(&self) -> bool {
+        self.internal().is_literal()
+    }
     pub fn cast<U: rjit::AsVarType>(&self) -> Var<U> {
         Var(self.0.cast(&U::as_var_type()).unwrap(), PhantomData)
     }
@@ -203,7 +211,7 @@ impl<T: rjit::AsVarType> Var<T> {
     pub fn gather<I: rjit::AsVarType + Int>(
         &self,
         index: impl Into<Var<I>>,
-        mask: Option<impl Into<Var<bool>>>,
+        mask: Option<impl Into<Bool>>,
     ) -> Self {
         let index = index.into();
         let mask = mask.map(|m| m.into().0);
@@ -278,6 +286,9 @@ impl Var<bool> {
             self.0.select(&true_value.0, &false_value.0).unwrap(),
             PhantomData,
         )
+    }
+    pub fn compress(&self) -> UInt32 {
+        Var(self.internal().compress().unwrap(), PhantomData)
     }
 }
 impl<T: rjit::AsVarType + Int> Var<T> {

@@ -13,6 +13,7 @@ pub struct Texture<const N: usize> {
 impl<const N: usize> Texture<N> {
     pub fn new(data: impl Into<Float32>, shape: [usize; N], n_channels: usize) -> Self {
         let data: Float32 = data.into();
+
         let texture = data
             .internal()
             .to_texture(shape.as_slice(), n_channels)
@@ -51,6 +52,7 @@ mod test {
         set_backend(["optix"]).unwrap();
 
         let val = Float32::from(vec![1.; 100].as_slice());
+        let val = literal(1.);
         let tex = Texture2f::new(val, [10, 10], 1);
 
         let x = tex.eval(vec2!(0.5, 0.5))[0].clone();
