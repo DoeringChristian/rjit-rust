@@ -22,9 +22,40 @@ impl Accel {
         mask: UInt32,
         payload: &[UInt32],
     ) -> Vec<UInt32> {
-        // self.0.trace_ray(payload, o.into(), )
-        // self.0.trace_ray()
-        // self.0.trace_ray()
-        todo!()
+        let o = [o.x.internal(), o.y.internal(), o.z.internal()];
+        let d = [d.x.internal(), d.y.internal(), d.z.internal()];
+        let tmin = tmin.internal();
+        let tmax = tmax.internal();
+        let t = t.internal();
+        let vis_mask = vis_mask.internal();
+        let ray_flags = ray_flags.internal();
+        let sbt_offset = sbt_offset.internal();
+        let sbt_stride = sbt_stride.internal();
+        let miss_sbt = miss_sbt.internal();
+        let mask = mask.internal();
+        let payload = payload
+            .into_iter()
+            .map(|p| p.internal())
+            .collect::<Vec<_>>();
+        let res = self
+            .0
+            .trace_ray(
+                &payload,
+                o,
+                d,
+                tmin,
+                tmax,
+                t,
+                Some(vis_mask),
+                Some(ray_flags),
+                Some(sbt_offset),
+                Some(sbt_stride),
+                Some(miss_sbt),
+                Some(mask),
+            )
+            .unwrap();
+        res.into_iter()
+            .map(|r| Var(r, std::marker::PhantomData))
+            .collect()
     }
 }
