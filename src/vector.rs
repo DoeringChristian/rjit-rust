@@ -9,10 +9,10 @@ pub struct Vec2<T> {
 #[macro_export]
 macro_rules! vec2 {
     ($x:expr, $y:expr) => {
-        Vec2::from(($x, $y))
+        $crate::vector::Vec2::from(($x, $y))
     };
     ($v:expr) => {
-        Vec2::from($v)
+        $crate::vector::Vec2::from($v)
     };
 }
 impl<T: rjit::AsVarType> From<Vec2<T>> for [Var<T>; 2] {
@@ -63,10 +63,10 @@ pub struct Vec3<T> {
 #[macro_export]
 macro_rules! vec3 {
     ($x:expr, $y:expr, $z:expr) => {
-        Vec3::from(($x, $y, $z))
+        $crate::vector::Vec3::from(($x, $y, $z))
     };
     ($v:expr) => {
-        Vec3::from($v)
+        $crate::vector::Vec3::from($v)
     };
 }
 impl<T: rjit::AsVarType> From<Vec3<T>> for [Var<T>; 3] {
@@ -113,10 +113,10 @@ pub struct Vec4<T> {
 #[macro_export]
 macro_rules! vec4 {
     ($x:expr, $y:expr, $z:expr, $w:expr) => {
-        Vec4::from(($x, $y, $z, $w))
+        $crate::vector::Vec4::from(($x, $y, $z, $w))
     };
     ($v:expr) => {
-        Vec4::from($v)
+        $crate::vector::Vec4::from($v)
     };
 }
 impl<T: rjit::AsVarType> From<Vec4<T>> for [Var<T>; 4] {

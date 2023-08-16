@@ -1,13 +1,16 @@
 #[cfg(test)]
 mod test;
 
+mod accel;
 mod num_traits;
+mod point;
 mod tensor;
 mod texture;
 mod var;
 mod vector;
 
 use num_traits::*;
+pub use point::*;
 pub use var::*;
 pub use vector::*;
 
