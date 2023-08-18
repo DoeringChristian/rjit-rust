@@ -29,8 +29,8 @@ impl<T: rjit::AsVarType, V: Into<Var<T>>> From<V> for Vec2<T> {
         }
     }
 }
-impl<T: rjit::AsVarType, V: Into<Var<T>>> From<(V, V)> for Vec2<T> {
-    fn from(value: (V, V)) -> Self {
+impl<T: rjit::AsVarType, X: Into<Var<T>>, Y: Into<Var<T>>> From<(X, Y)> for Vec2<T> {
+    fn from(value: (X, Y)) -> Self {
         Self {
             x: value.0.into(),
             y: value.1.into(),
@@ -84,8 +84,10 @@ impl<T: rjit::AsVarType, V: Into<Var<T>>> From<V> for Vec3<T> {
         }
     }
 }
-impl<T: rjit::AsVarType, V: Into<Var<T>>> From<(V, V, V)> for Vec3<T> {
-    fn from(value: (V, V, V)) -> Self {
+impl<T: rjit::AsVarType, X: Into<Var<T>>, Y: Into<Var<T>>, Z: Into<Var<T>>> From<(X, Y, Z)>
+    for Vec3<T>
+{
+    fn from(value: (X, Y, Z)) -> Self {
         Self {
             x: value.0.into(),
             y: value.1.into(),
@@ -135,8 +137,10 @@ impl<T: rjit::AsVarType, V: Into<Var<T>>> From<V> for Vec4<T> {
         }
     }
 }
-impl<T: rjit::AsVarType, V: Into<Var<T>>> From<(V, V, V, V)> for Vec4<T> {
-    fn from(value: (V, V, V, V)) -> Self {
+impl<T: rjit::AsVarType, X: Into<Var<T>>, Y: Into<Var<T>>, Z: Into<Var<T>>, W: Into<Var<T>>>
+    From<(X, Y, Z, W)> for Vec4<T>
+{
+    fn from(value: (X, Y, Z, W)) -> Self {
         Self {
             x: value.0.into(),
             y: value.1.into(),
