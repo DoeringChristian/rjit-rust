@@ -50,7 +50,7 @@ impl Accel {
         sbt_offset: UInt32,
         sbt_stride: UInt32,
         miss_sbt: UInt32,
-        mask: UInt32,
+        mask: Bool,
         payload: &[UInt32],
     ) -> Vec<UInt32> {
         let o = [o.x.internal(), o.y.internal(), o.z.internal()];
@@ -173,8 +173,26 @@ mod test {
 
         let o = point3!([0.6f32, 0.6f32].as_slice(), 0.6f32, 0f32);
         let d = vec3!(0.0f32, 0.0f32, [1.0f32, -1.].as_slice());
-        let payload = [];
-        // accel.trace_ray()
-        // let payload = accel.trace_ray(point3!(&[0.6f32, 0.6f32], 0.6f32, 0f32));
+        let payload = [literal(0), literal(0), literal(0), literal(0), literal(0)];
+        let payload = accel.trace_ray(
+            o,
+            d,
+            literal(0.),
+            literal(100000.),
+            literal(0.),
+            literal(0xff),
+            literal(0),
+            literal(0),
+            literal(0),
+            literal(0),
+            literal(true),
+            payload.as_slice(),
+        );
+
+        let valid = payload[0].cast::<bool>();
+        valid.schedule();
+        eval();
+        let valid: Vec<_> = valid.into();
+        assert_eq!(valid, vec![true, false]);
     }
 }

@@ -1,3 +1,4 @@
+use crate::num_traits::*;
 use crate::var::Bool;
 use crate::*;
 
